@@ -1,0 +1,19 @@
+body {
+    background-color: powderblue;
+}
+
+p    {
+    color: red;
+}
+
+.center {
+    margin: auto;
+    width: 50%;
+    border: 3px solid green;
+    padding: 10px;
+    margin-top: 10%;
+}
+
+.center p {
+    font-size: x-large;
+}

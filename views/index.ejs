@@ -1,0 +1,113 @@
+<!doctype html>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<html>
+
+<head>
+	<title>My project</title>
+    <meta charset="utf-8">
+    
+    <link rel="stylesheet" href="styles.css">
+
+	<link rel="stylesheet" href="http://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/css/bootstrap.min.css">
+	<script src="https://www.chartjs.org/dist/2.8.0/Chart.min.js"></script>
+	<!-- jQuery library -->
+	<script src="https://ajax.googleapis.com/ajax/libs/jquery/1.12.4/jquery.min.js"></script>
+	
+	<script>
+		$(document).ready(function () {
+            setInterval(update_pinstatus,500); // cap nhat giao dien cua nut nhan
+
+            setInterval(loaddata, 1000);
+            
+            $("#btn_1").click(function(){
+                let state = document.getElementById('btn_1').innerHTML ==  "turn on dev1" ? 1 : 0;
+                control_pin(1, state);
+                //update_pinstatus();
+            });
+
+            $("#btn_2").click(function(){
+                let state = document.getElementById('btn_2').innerHTML ==  "turn on dev2" ? 1 : 0;
+                control_pin(2, state);
+                //update_pinstatus();
+            });
+
+            $("#btn_3").click(function(){
+                let state = document.getElementById('btn_3').innerHTML ==  "turn on dev3" ? 1 : 0;
+                control_pin(3, state);
+                //update_pinstatus();
+            });
+
+            $("#btn_4").click(function(){
+                let state = document.getElementById('btn_4').innerHTML ==  "turn on dev4" ? 1 : 0;
+                control_pin(4, state);
+                //update_pinstatus();
+            });
+
+            
+
+        });
+        
+        function loaddata() {
+            $.post('/getdata')
+            .done((data) => {
+                console.log(data);
+                let d = JSON.stringify(data);
+                d = JSON.parse(d);
+
+                if(d.data.temp >= 40 || d.data.soil_humid >= 60)
+                {
+                    document.getElementById("alert").innerHTML  = "NOT OK";
+                }
+                else {
+                    document.getElementById("alert").innerHTML  = "OK";
+                }
+
+                document.getElementById("temp").textContent = d.data.temp;
+                document.getElementById("humid").textContent = d.data.humid;
+                document.getElementById("soil-humid").textContent = d.data.soil_humid; 
+            })
+        }
+
+        function update_pinstatus() {
+            $.post('/update-pin-status')
+            .done((data) => {
+                console.log(data);
+                let d = JSON.stringify(data);
+                d = JSON.parse(d);
+
+                document.getElementById("btn_1").innerHTML = d.data.pin1 == 0 ? "turn on dev1" : "turn off dev1";
+                document.getElementById("btn_2").innerHTML = d.data.pin2 == 0 ? "turn on dev2" : "turn off dev2";
+                document.getElementById("btn_3").innerHTML = d.data.pin3 == 0 ? "turn on dev3" : "turn off dev3";
+                document.getElementById("btn_4").innerHTML = d.data.pin4 == 0 ? "turn on dev4" : "turn off dev4";
+            })
+        }
+
+        function control_pin(pin, state) {
+            $.post('/control-pin-state', {pin: pin, state: state})
+            .done((data) => {
+                console.log(data);
+            })
+        }
+
+	</script>
+
+</head>
+
+<body>
+    <div class="center">
+        <div>Monitoring ...</div><br>
+        <div class="main">
+            <p>Temperature: <div id="temp">0</div><br>
+            <p>Humidity: </p><div id="humid">0</div><br>
+            <p>Soil-humid: </p><div id="soil-humid">0</div>
+            <p>Canh bao: </p><div id="alert">No</div>
+            <button id="btn_1">Button 1</button>
+            <button id="btn_2">Button 2</button>
+            <button id="btn_3">Button 3</button>
+            <button id="btn_4">Button 4</button>
+        </div> 
+    </div>
+    
+</body>
+
+</html>
