@@ -8,8 +8,22 @@ var urlencodedParser = bodyParser.urlencoded({ extended: false });
 
 var port = 3333;
 
+const mongoose = require('mongoose')
+
+mongoose.connect('mongodb://localhost/myDB', {useNewUrlParser: true, useUnifiedTopology: true});
+
+const envSchema = new mongoose.Schema({
+    temp: Number,
+    humid: Number,
+    soil_humid: Number,
+    time: Date
+})
+
+const env = mongoose.model("env", envSchema);
+
 var humid = 0, temp = 0, soil_humid = 0;
 var pin1, pin2, pin3, pin4;
+const PIN_NUM = 4;
 
 app.use(express.static("public"));
 
@@ -26,13 +40,27 @@ app.get("/", function (req, res) {
 	res.render("./index.ejs");
 });
 
+app.get("/stored-data", (req, res) => {
+    env.find()
+    .exec((err, env_data) =>{
+        if(err) throw err;
+        console.log(env_data);
+        res.jsonp({
+            data: env_data
+        })
+    })
+})
+
 app.post("/update", urlencodedParser, function(req, res) { // cap nhat bien toan cuc 
     let params = req.body;
     console.log(params.temp);
-    if(params.humid >= 0 && params.temp >=0 && params.gas >= 0) {
+    if(params.humid >= 0 && params.temp >=0 && params.soil_humid >= 0) {
+        var date = new Date();
+        env.create({temp: params.temp, humid: params.humid, soil_humid: params.soil_humid, time: date});
+
         temp = params.temp;// Update new value if it's ok.
         humid = params.humid;
-        gas = params.soil_humid;
+        soil_humid = params.soil_humid;
         res.jsonp({
             data: {
                 receive: "OK"
@@ -84,7 +112,7 @@ app.post("/update-pin-status", urlencodedParser, function(req, res) { // cap nha
 
 app.post("/control-pin-state", urlencodedParser, function(req, res) { // cap nhat bien toan cuc 
     let params = req.body;
-    if(params.pin <= 4 && params.state <= 1) {
+    if(params.pin <= PIN_NUM && params.state <= 1) {
         switch (params.pin) {
             case '1':
                 pin1 = params.state;
