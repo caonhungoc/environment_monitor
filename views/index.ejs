@@ -54,7 +54,7 @@
                 let d = JSON.stringify(data);
                 d = JSON.parse(d);
 
-                if(d.data.temp >= 40 || d.data.soil_humid >= 60)
+                if(d.data.temp >= 40 || d.data.soil_humid <= 50)
                 {
                     document.getElementById("alert").innerHTML  = "NOT OK";
                 }
@@ -69,7 +69,7 @@
         }
 
         function update_pinstatus() {
-            $.post('/update-pin-status')
+            $.post('/get-pin-status')
             .done((data) => {
                 console.log(data);
                 let d = JSON.stringify(data);

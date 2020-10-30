@@ -10,7 +10,7 @@ var port = 3333;
 
 const mongoose = require('mongoose')
 
-mongoose.connect('mongodb://localhost/myDB', {useNewUrlParser: true, useUnifiedTopology: true});
+mongoose.connect('mongodb://localhost/my_db', {useNewUrlParser: true, useUnifiedTopology: true});
 
 const envSchema = new mongoose.Schema({
     temp: Number,
@@ -40,7 +40,7 @@ app.get("/", function (req, res) {
 	res.render("./index.ejs");
 });
 
-app.get("/stored-data", (req, res) => {
+app.get("/stored-data", (req, res) => { // lay thong tin da duoc luu tru trong db
     env.find()
     .exec((err, env_data) =>{
         if(err) throw err;
@@ -51,15 +51,17 @@ app.get("/stored-data", (req, res) => {
     })
 })
 
-app.post("/update", urlencodedParser, function(req, res) { // cap nhat bien toan cuc 
+app.post("/update", urlencodedParser, function(req, res) { // luu du lieu tu esp vao db 
     let params = req.body;
-    console.log(params.temp);
+    console.log(params.temp); 
+    console.log(params.humid);
+    console.log(params.soil_humid);
     if(params.humid >= 0 && params.temp >=0 && params.soil_humid >= 0) {
         var date = new Date();
         env.create({temp: params.temp, humid: params.humid, soil_humid: params.soil_humid, time: date});
 
         temp = params.temp;// Update new value if it's ok.
-        humid = params.humid;
+        humid = params.humid; 
         soil_humid = params.soil_humid;
         res.jsonp({
             data: {
@@ -76,7 +78,7 @@ app.post("/update", urlencodedParser, function(req, res) { // cap nhat bien toan
     }
 });
 
-app.post("/pin-status", urlencodedParser, function(req, res) { // cap nhat bien toan cuc 
+app.post("/pin-status", urlencodedParser, function(req, res) { // lay gia tri gpio cua esp de cap nhat giao dien
     let params = req.body;
 
     if(params.pin1 <= 1 && params.pin2 <= 1 && params.pin3 <= 1 && params.pin4 <= 1) {
@@ -84,14 +86,14 @@ app.post("/pin-status", urlencodedParser, function(req, res) { // cap nhat bien 
         pin2 = params.pin2;
         pin3 = params.pin3;
         pin4 = params.pin4;
-        res.jsonp({
+        res.status(200).jsonp({
             data: {
                 receive: "OK"
             }
         });
     }
     else {
-        res.jsonp({
+        res.status(200).jsonp({
             data: {
                 receive: "NOT OK"
             }
@@ -99,8 +101,8 @@ app.post("/pin-status", urlencodedParser, function(req, res) { // cap nhat bien 
     }
 });
 
-app.post("/update-pin-status", urlencodedParser, function(req, res) { // cap nhat bien toan cuc 
-    res.jsonp({
+app.post("/get-pin-status", urlencodedParser, function(req, res) { // esp yeu cau gia tri gipo tu server de dieu khien gpio
+    res.status(200).jsonp({
         data: {
             pin1: pin1,
             pin2: pin2,
@@ -110,7 +112,16 @@ app.post("/update-pin-status", urlencodedParser, function(req, res) { // cap nha
     });
 }); 
 
-app.post("/control-pin-state", urlencodedParser, function(req, res) { // cap nhat bien toan cuc 
+app.get("/get-pin-status", urlencodedParser, function(req, res) { // esp yeu cau gia tri gipo tu server de dieu khien gpio
+    res.status(200).jsonp({
+            pin1: pin1,
+            pin2: pin2,
+            pin3: pin3,
+            pin4: pin4
+    });
+}); 
+
+app.post("/control-pin-state", urlencodedParser, function(req, res) { // giao dien web gui yeu cau thay doi trang thai gpio
     let params = req.body;
     if(params.pin <= PIN_NUM && params.state <= 1) {
         switch (params.pin) {
@@ -143,6 +154,16 @@ app.post("/control-pin-state", urlencodedParser, function(req, res) { // cap nha
 });
 
 app.post("/getdata", urlencodedParser, function(req, res) {
+    res.jsonp({
+        data: {
+            temp: temp,
+            humid: humid,
+            soil_humid: soil_humid
+        }
+    });
+});
+
+app.get("/getdata", function(req, res) {
     res.jsonp({
         data: {
             temp: temp,
