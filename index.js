@@ -6,7 +6,7 @@ app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
 var urlencodedParser = bodyParser.urlencoded({ extended: false });
 
-var port = 3333;
+var port = process.env.PORT || 3333;
 
 const mongoose = require('mongoose')
 
