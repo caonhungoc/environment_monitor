@@ -1,0 +1,69 @@
+<!doctype html>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<html>
+
+<head>
+    <title>Work page!</title>
+    <meta charset="utf-8">
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+    <script src="socket.io/socket.io.js"></script>
+    <link rel="stylesheet" type="text/css" href="layout.css">
+    <!-- jQuery library -->
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.12.4/jquery.min.js"></script>
+
+
+    <script>
+
+        $(document).ready(function () {
+            $("#btn_1").click(function () {
+                socket.emit("control-pin", { pin: 1, state: 1 });
+            });
+
+            $("#btn_2").click(function () {
+                socket.emit("control-pin", { pin: 1, state: 0 });
+            });
+
+            $("#btn_3").click(function () {
+                socket.emit("control-pin", { pin: 2, state: 1 });
+            });
+
+            $("#btn_4").click(function () {
+                socket.emit("control-pin", { pin: 2, state: 0 });
+            });
+
+        });
+        var socket = io("http://localhost:5000");
+
+        socket.on("status-of-pins", function (data) {
+
+        });
+
+        socket.on("sensor-values", function (data) {
+
+        });
+
+
+
+    </script>
+
+</head>
+
+<body>
+    <div id="wrapper">
+        <div id="main">
+            <p>Nhiệt độ:
+            <div id="temp">0</div><br>
+            <p>Độ ẩm: </p>
+            <div id="humid">0</div><br>
+            <p>Chỉ số bụi: </p>
+            <div id="dust">0</div><br>
+
+            <p>Thiết bị 1</p>
+            <p>Trạng thái hiện tại</p><button id="btn_1">turn on</button><button id="btn_2">turn off</button><br>
+            <p>Thiết bị 2</p>
+            <p>Trạng thái hiện tại</p><button id="btn_3">turn on</button><button id="btn_4">turn off</button><br>
+        </div>
+    </div>
+</body>
+
+</html>

@@ -1,174 +1,97 @@
 var express = require("express");
 var app = express();
-var bodyParser = require("body-parser");
+var net = require('net');
 
-app.use(bodyParser.json());
-app.use(bodyParser.urlencoded({ extended: true }));
-var urlencodedParser = bodyParser.urlencoded({ extended: false });
+app.use(express.urlencoded({ extended: true }));
+app.use(express.json());
 
-var port = process.env.PORT || 3333;
-
-const mongoose = require('mongoose')
-
-mongoose.connect('mongodb://localhost/my_db', {useNewUrlParser: true, useUnifiedTopology: true});
-
-const envSchema = new mongoose.Schema({
-    temp: Number,
-    humid: Number,
-    soil_humid: Number,
-    time: Date
-})
-
-const env = mongoose.model("env", envSchema);
-
-var humid = 0, temp = 0, soil_humid = 0;
-var pin1, pin2, pin3, pin4;
-const PIN_NUM = 4;
+const port = process.env.PORT || 5000;
 
 app.use(express.static("public"));
 
 app.set("view engine", "ejs");
 app.set("views", "./views");
 
-var server = require("http").Server(app);
+var humid = 0, temp = 0, dust = 0;
+var esp_array = [];
 
-server.listen(port, () =>{
+const server = require("http").Server(app);
+const io = require("socket.io")(server);
+
+// Server handling request of UI of socket io web app
+server.listen(port, () => {
     console.log("Server running on port " + port);
 });
 
 app.get("/", function (req, res) {
-	res.render("./index.ejs");
+    res.render("./home.ejs");
 });
 
-app.get("/stored-data", (req, res) => { // lay thong tin da duoc luu tru trong db
-    env.find()
-    .exec((err, env_data) =>{
-        if(err) throw err;
-        console.log(env_data);
-        res.jsonp({
-            data: env_data
+io.on('connection', (socket) => {
+    console.log("Have connection from : " + socket.id);
+
+    socket.on("disconnect", function () {
+        console.log("Disconnect from : " + socket.id);
+    });
+
+    socket.on("control-pin", (data) => {
+        let pin = data.pin;
+        let state  = data.state;
+        console.log(`pin = ${pin} have state = ${state}`);
+        esp_array.forEach(e => {
+            if(e.username == 'useruser') {
+                e.write(`pin${pin}:${state}}`);
+            }
         })
-    })
+    });
+
 })
 
-app.post("/update", urlencodedParser, function(req, res) { // luu du lieu tu esp vao db 
-    let params = req.body;
-    console.log(params.temp); 
-    console.log(params.humid);
-    console.log(params.soil_humid);
-    if(params.humid >= 0 && params.temp >=0 && params.soil_humid >= 0) {
-        var date = new Date();
-        env.create({temp: params.temp, humid: params.humid, soil_humid: params.soil_humid, time: date});
+// Configuration parameters for server TCP handling ESP32 connection
+const HOST = '0.0.0.0';
+const PORT = 6789;
 
-        temp = params.temp;// Update new value if it's ok.
-        humid = params.humid; 
-        soil_humid = params.soil_humid;
-        res.jsonp({
-            data: {
-                receive: "OK"
-            }
-        });
-    }
-    else {
-        res.jsonp({
-            data: {
-                receive: "NOT OK"
-            }
-        });
-    }
+// Create Server instance to handle ESP32
+const server_raw = net.createServer(onClientConnected);
+
+server_raw.listen(PORT, HOST, function () {
+    console.log('server listening on %j', server_raw.address());
 });
 
-app.post("/pin-status", urlencodedParser, function(req, res) { // lay gia tri gpio cua esp de cap nhat giao dien
-    let params = req.body;
+function onClientConnected(sock) {
+    sock.setKeepAlive(true, 30000); //0.5 min = 30000 milliseconds.
 
-    if(params.pin1 <= 1 && params.pin2 <= 1 && params.pin3 <= 1 && params.pin4 <= 1) {
-        pin1 = params.pin1;// Update new value if it's ok.
-        pin2 = params.pin2;
-        pin3 = params.pin3;
-        pin4 = params.pin4;
-        res.status(200).jsonp({
-            data: {
-                receive: "OK"
+    console.log('Embedded client connected');
+    sock.on('data', function (data) {
+        let verify = data.slice(0, 16) + ''; // Xac minh dung esp32, co the kiem "id" cua esp32 de xac minh nguoi so huu esp
+        if('Hello from ESP32' == verify) {
+            if(sock.username != 'useruser') {
+                sock.username = 'useruser';
+                esp_array.push(sock);
             }
-        });
-    }
-    else {
-        res.status(200).jsonp({
-            data: {
-                receive: "NOT OK"
-            }
-        });
-    }
-});
-
-app.post("/get-pin-status", urlencodedParser, function(req, res) { // esp yeu cau gia tri gipo tu server de dieu khien gpio
-    res.status(200).jsonp({
-        data: {
-            pin1: pin1,
-            pin2: pin2,
-            pin3: pin3,
-            pin4: pin4
+        } else if (data.slice(0, 7) == '{ node:') { // cap nhat gia tri cam bien cho front-end
+            io.sockets.emit('sensor-values', {humid: 50, temp: 29, dust: 0.1});
+        } else if (data.slice(0, 6) == '{ pin:') { // cap nhat gia tri cua cac pin device tren esp32
+            io.sockets.emit('status-of-pins', {pin1: 1, pin2: 1});
         }
     });
-}); 
-
-app.get("/get-pin-status", urlencodedParser, function(req, res) { // esp yeu cau gia tri gipo tu server de dieu khien gpio
-    res.status(200).jsonp({
-            pin1: pin1,
-            pin2: pin2,
-            pin3: pin3,
-            pin4: pin4
-    });
-}); 
-
-app.post("/control-pin-state", urlencodedParser, function(req, res) { // giao dien web gui yeu cau thay doi trang thai gpio
-    let params = req.body;
-    if(params.pin <= PIN_NUM && params.state <= 1) {
-        switch (params.pin) {
-            case '1':
-                pin1 = params.state;
-                break;
-            case '2':
-                pin2 = params.state;
-                break;
-            case '3':
-                pin3 = params.state;
-                break;
-            case '4':
-                pin4 = params.state;
-                break;
-        }
-        res.jsonp({
-            data: {
-                receive: "OK"
-            }
-        });
-    }
-    else {
-        res.jsonp({
-            data: {
-                receive: "NOT OK"
-            }
-        });
-    }
-});
-
-app.post("/getdata", urlencodedParser, function(req, res) {
-    res.jsonp({
-        data: {
-            temp: temp,
-            humid: humid,
-            soil_humid: soil_humid
+    sock.on('close', function (error) {
+        let i = esp_array.indexOf(sock);
+        esp_array.splice(i, 1);
+        console.log('Socket closed!');
+        if (error) {
+            console.log('Socket was closed coz of transmission error');
         }
     });
-});
 
-app.get("/getdata", function(req, res) {
-    res.jsonp({
-        data: {
-            temp: temp,
-            humid: humid,
-            soil_humid: soil_humid
+    sock.on('error', function (error) {
+        let i = esp_array.indexOf(sock);
+        esp_array.splice(i, 1);
+        if (error) {
+            console.log('Socket was closed coz of transmission error');
         }
     });
-});
+    sock.on('timeout', function () {
+        console.log('Connection  time out');
+    });
+};
